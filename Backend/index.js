@@ -78,6 +78,30 @@ app.post('/api/entrenamientos', async (req, res) => {
     }
 });
 
+// DELETE: Eliminar un entrenamiento por ID
+app.delete('/api/entrenamientos/:id', async (req, res) => {
+    try {
+        // 1. Capturamos el ID que viene en la URL
+        const { id } = req.params;
+        const pool = await getConnection();
+
+        // 2. Ejecutamos el DELETE en la base de datos de forma segura
+        const result = await pool.request()
+            .input('Id', sql.Int, id)
+            .query('DELETE FROM Workouts WHERE Id = @Id');
+
+        // 3. Revisamos si SQL Server realmente borró algo
+        if (result.rowsAffected[0] === 0) {
+            return res.status(404).json({ mensaje: 'No se encontro ningun entrenamiento con ese ID' });
+        }
+
+        res.json({ mensaje: 'Entrenamiento eliminado correctamente' });
+    } catch (error) {
+        console.error('Error al eliminar entrenamiento:', error);
+        res.status(500).json({ mensaje: 'Error al eliminar el entrenamiento' });
+    }
+});
+
 // GET: Obtener todos los entrenamientos
 app.get('/api/entrenamientos', async (req, res) => {
     try {
@@ -87,6 +111,41 @@ app.get('/api/entrenamientos', async (req, res) => {
     } catch (error) {
         console.error('Error en la consulta:', error);
         res.status(500).json({ mensaje: 'Error al obtener los entrenamientos' });
+    }
+});
+
+//ENDPOINTS HISTORIAL DE CALORIAS
+
+// POST: Registrar calorias del dia
+app.post('/api/calorias', async (req, res) => {
+    try {
+        const { UsuarioId, Fecha, Pasos, Calorias_Consumidas, Calorias_Quemadas_Totales } = req.body;
+        const pool = await getConnection();
+
+        await pool.request()
+            .input('UsuarioId', sql.Int, UsuarioId)
+            .input('Fecha', sql.DateTime, Fecha)
+            .input('Pasos', sql.Int, Pasos)
+            .input('Calorias_Consumidas', sql.Int, Calorias_Consumidas)
+            .input('Calorias_Quemadas_Totales', sql.Int, Calorias_Quemadas_Totales)
+            .query('INSERT INTO Historial_Calorias (UsuarioId, Fecha, Pasos, Calorias_Consumidas, Calorias_Quemadas_Totales) VALUES (@UsuarioId, @Fecha, @Pasos, @Calorias_Consumidas, @Calorias_Quemadas_Totales)');
+
+        res.status(201).json({ mensaje: 'Historial de calorias registrado' });
+    } catch (error) {
+        console.error('Error al registrar calorias:', error);
+        res.status(500).json({ mensaje: 'Error al registrar las calorias' });
+    }
+});
+
+//GET: Obtener el historial completo de calorias
+app.get('/api/calorias', async (req, res) => {
+    try {
+        const pool = await getConnection();
+        const result = await pool.request().query('SELECT * FROM Historial_Calorias');
+        res.json(result.recordset);
+    } catch (error) {
+        console.error('Error al obtener historial de calorias:', error);
+        res.status(500).json({ mensaje: 'Error al obtener el historial de calorias' });
     }
 });
 
